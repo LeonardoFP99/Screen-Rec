@@ -25,7 +25,60 @@ startSharing.addEventListener('click', async () => {
 
         videoScreen.srcObject = combinedStreams;
 
+        videoScreen.onloadedmetadata = () =>{
+            videoScreen.play();
+        }
+
+        combinedStreams.getVideoTracks()[0].onended = () =>{
+            stopSharing();
+        }
+
+        startRecording(combinedStreams);
+
     }catch(error){
         console.log(error);
     }
 });
+
+function startRecording(mediaStream) {
+
+    mediaRecorder = new MediaRecorder(mediaStream, {mimeType: "video/webm"});
+
+    mediaRecorder.ondataavailable = (event) => {
+        recordedChunks.push(event.data);
+    };
+
+    mediaRecorder.start();
+
+    mediaRecorder.onstop = () => {
+        downloadVideo();
+    };
+
+}
+
+function stopSharing() {
+
+    if(videoScreen.srcObject){
+        videoScreen.srcObject.getTracks().forEach(track => track.stop());
+        videoScreen.srcObject = null;
+    }
+
+    if(mediaRecorder){
+        mediaRecorder.stop();
+    }
+
+}
+
+function downloadVideo() {
+    const blob = new Blob(recordedChunks, {type: "video/webm"});
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    document.body.appendChild(a);
+    a.style.display = "none";
+    a.href = url;
+    a.download = "video_browser.mp4";
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
